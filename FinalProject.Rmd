@@ -4,15 +4,121 @@ author: "Your Name"
 date: "`r Sys.Date()`"
 output: html_document
 ---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
 
-## Introduction
 
-Hello
-hi
 
-## Analysis
-
+### Loading Libraries
 ```{r}
-# Your R code goes here
-summary(cars)
-##charlie testing his github skills
+library(ISLR2)
+library(ggcorrplot)
+library(corrplot)
+library(leaps)
+```
+
+
+### Analysis
+```{r}
+#loading data
+bananas <- read.csv("C:\\Users\\cww0035\\OneDrive - Auburn University\\Documents\\GitHub\\STAT-6000-Final-Project\\going_bananas.csv")
+
+#confirming that there are no holes in the dataset
+bananas <- na.omit(bananas)
+View(bananas)
+
+#converting categorical variables to factors
+bananas$ripeness_category <- as.factor(bananas$ripeness_category)
+bananas$quality_category <- as.factor(bananas$quality_category)
+bananas$region <- as.factor(bananas$region)
+bananas$variety <- as.factor(bananas$variety)
+summary(bananas)
+str(bananas)
+
+#creating subset for correlations and observing relationships
+#the correlation subset omits variety, region, quality_category, ripeness_category, and harvest_date
+cor_subset <- bananas[,c(1,4,6,8,9,10,11,13,14,15,16)]
+cor(cor_subset)
+corrplot(cor(cor_subset))
+ggcorrplot(cor(cor_subset))
+
+#quality category is a categorical variable based on the quality score, so we decided to remove it from the analysis.
+
+#the three continuous variables that have the strongest relationship with quality score are
+#length, sugarcontent, and ripeness index
+
+#we converted the harvest_date to a binary variable based on the month of harvest, September = 0, October = 1. There were only two months in the harvest window.
+```
+
+### Subset and Base MLR
+```{r}
+#creating subset of variables selected for analysis.  This excludes 2 categorical variables that had several categories each.  It also excludes the sample ID, quality_category, and the harvest_date on which harvest_binary is based.
+banana_sub <- bananas[,c(4,6,7,8,9,10,11,13,14,15,16,17)]
+View(banana_sub)
+
+attach(banana_sub)
+model <- lm(quality_score ~ ., data = banana_sub)
+summary(model)
+
+#adjusted R squared is 98.3%, but only 4 variables are significant contributors to the model.
+
+
+```
+### Training and Test Sets
+```{r}
+set.seed(123)
+train <- sample(1:nrow(banana_sub), nrow(banana_sub)*.7)
+test <- setdiff(1:nrow(banana_sub), train)
+
+```
+
+
+### Best Subset Selection
+```{r}
+#performing best subset selection
+regfit.best <- regsubsets(quality_score ~ ., data = banana_sub[train,], nvmax = 11)
+
+#creating a model matrix from the test data
+test.mat <- model.matrix(quality_score ~ ., data = banana_sub[test,])
+
+predict.regsubsets <- function (object ,newdata ,id ,...){
+form=as.formula (object$call [[2]])
+mat=model.matrix (form ,newdata )
+coefi =coef(object ,id=id)
+xvars =names (coefi )
+mat[,xvars ]%*% coefi
+}
+
+
+##choosing among models of different sizes using cross-validation
+k <- 10
+n <- nrow(banana_sub)
+set.seed(123)
+folds <- sample(rep(1:k, length = n))
+cv.errors <- matrix(NA, k, 11, dimnames = list(NULL, paste(1:11)))
+##writing a for loop that performs cross-validation
+for(j in 1:k) {
+  best.fit <- regsubsets(quality_score ~ ., data = banana_sub[folds != j, ], nvmax = 11)
+  for (i in 1:11) {
+    pred = predict(best.fit, banana_sub[folds == j, ], id = i)
+    cv.errors[j, i] = mean((banana_sub$quality_score[folds == j]- pred)^2)
+  }
+}
+
+#obtaining errors for each of the cross-validation models
+#errors drop substantially at 3 variables and then don't drop much after that
+mean.cv.errors <- apply(cv.errors, 2, mean)
+mean.cv.errors
+
+#viewing plot to see that CV selects an 3-variable model
+par(mfrow = c(1,1))
+plot(mean.cv.errors, type = "b")
+
+#running best subset selection on the full dataset and pulling coefficients for the 3-variable model
+reg.best <- regsubsets(quality_score ~ ., data = banana_sub, nvmax = 11)
+coef(reg.best, 3)
+
+
+```
+
