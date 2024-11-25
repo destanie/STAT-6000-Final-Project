@@ -122,3 +122,122 @@ coef(reg.best, 3)
 
 ```
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
+## lasso logistic regression (classification)
+```{r}
+# loading data
+bananas <- read.csv("going_bananas.csv")
+# y is going to be our target variable which is the quality_category
+y <- bananas$quality_category 
+y <- as.factor(y)  # making sure y is a factor
+X <- model.matrix(~ . - quality_category - 1, data = bananas)  
+# creating the predictor matrix (X) and excluding the response variable
+
+# loading the library we need
+library(glmnet)
+# fitting Lasso logistic regression
+lasso_model <- glmnet(X, y, alpha = 1, family = "multinomial") 
+
+# performing cross-validation
+cv_lasso <- cv.glmnet(X, y, alpha = 1, family = "multinomial")
+
+# getting and printing the best lambda
+best_lambda <- cv_lasso$lambda.min
+cat("Optimal Lambda:", best_lambda, "\n")
+
+# plotting cross-validation results
+plot(cv_lasso)
+
+# coefficients for the optimal lambda
+lasso_coefficients <- coef(lasso_model, s = best_lambda)
+print(lasso_coefficients)
+
+# predicting probabilities
+probabilities <- predict(lasso_model, newx = X, s = best_lambda, type = "response")
+
+# predict class labels
+predicted_classes <- predict(lasso_model, newx = X, s = best_lambda, type = "class")
+
+# viewing predictions
+head(predicted_classes)
+
+# creating a confusion matrix
+# Create confusion matrix
+#install.packages("caret")
+library(caret)
+confusionMatrix(as.factor(predicted_classes), as.factor(y))
+
+```
+
+## lasso logistic regression results
+
+The confusion matrix shows that 434 instances of the "Good" category were correctly classified, with no misclassifications in the off-diagonal entries, indicating **perfect** classification by the model. The confidence interval for the model's performance is [0.9963, 1], demonstrating extremely high confidence. It is worth noting that the "Processing" category constitutes the majority class. Additionally, the small p-value suggests that the model's accuracy is significantly better than random guessing. However, the perfect classification raises concerns about potential overfitting, which may overshadow the key insights provided by the model.. 
+
+## Adressing Overfitting
+
+```{r}
+# Splitting the data into training and test sets (80-20 split)
+set.seed(123)
+train_indices <- sample(1:nrow(X), size = 0.8 * nrow(X))
+X_train <- X[train_indices, ]
+y_train <- y[train_indices]
+X_test <- X[-train_indices, ]
+y_test <- y[-train_indices]
+
+# fitting thr Lasso model on training data
+lasso_model <- glmnet(X_train, y_train, alpha = 1, family = "multinomial")
+
+# Performing cross-validation on the training data
+cv_lasso <- cv.glmnet(X_train, y_train, alpha = 1, family = "multinomial")
+
+# best lambda
+best_lambda <- cv_lasso$lambda.min
+cat("Optimal Lambda:", best_lambda, "\n")
+
+
+# prediction of probabilities and classes on test data
+probabilities_test <- predict(lasso_model, newx = X_test, s = best_lambda, type = "response")
+predicted_classes_test <- predict(lasso_model, newx = X_test, s = best_lambda, type = "class")
+
+# confusion matrix for test set
+confusionMatrix(as.factor(predicted_classes_test), as.factor(y_test))
+
+```
+
+
+## Intepreting
+
+After addressing the overfitting issue, the model is no longer perfect. It performs well in predicting the "Good" category, and both "Processing" and "Unripe" are accurately classified. However, the model struggles with the "Premium" classification. Despite achieving a high overall accuracy and a strong Kappa statistic of 0.9721, the difficulty in predicting the "Premium" class comes from the limited number of premium samples in the dataset, thus highlighting the model's challenges with minority class prediction. Nonetheless, this model is an improvement over the earlier "perfect" model, as it provides a more realistic and robust representation of the data. 
+ 
