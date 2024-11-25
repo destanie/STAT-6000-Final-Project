@@ -122,36 +122,107 @@ coef(reg.best, 3)
 
 ```
 
+###Forward and backward stepwise selection
+```{r}
+#load data
+bananas <- read.csv("C:\\Users\\mecal\\OneDrive - Auburn University\\Stat\\going_bananas.csv")
+library(caret)
 
+#forward stepwise selection model
+regfit.fwd <- regsubsets(quality_score ~ ., data = banana_sub[train,], nvmax = 11, method = "forward")
+summary(regfit.fwd)
 
+#create model matrix
+test.mat.step <- model.matrix(quality_score ~ ., data = banana_sub[test , ])
+coef(regfit.fwd,11)
 
+#predict function
+predict.regsubsets <- function (object ,newdata ,id ,...){
+form=as.formula (object$call [[2]])
+mat=model.matrix (form ,newdata )
+coefi =coef(object ,id=id)
+xvars =names (coefi )
+mat[,xvars ]%*% coefi
+}
 
+#name vectors and store results
+k <- 10
+n <- nrow(banana_sub)
+set.seed(123)
+folds <- sample(rep(1:k, length = n))
+cv.errors <- matrix(NA, k, 11, dimnames = list(NULL, paste(1:11)))
 
+#for loop with predict function
+for(j in 1:k) {
+  best.fit <- regsubsets(quality_score ~ ., data = banana_sub[folds != j, ], nvmax = 11, method = "forward")
+  for (i in 1:11) {
+    pred = predict(best.fit, banana_sub[folds == j, ], id = i)
+    cv.errors[j, i] = mean((banana_sub$quality_score[folds == j]- pred)^2)
+  }
+}
 
+#obtaining errors for each of the cross-validation models
+mean.cv.errors <- apply(cv.errors, 2, mean)
+mean.cv.errors
 
+#viewing plot
+#cv selects 3-variable model
+par(mfrow = c(1,1))
+plot(mean.cv.errors, type = "b")
 
+#running best subset selection on the full dataset and pulling coefficients for the 3-variable model
+reg.best.fwd <- regsubsets(quality_score ~ ., data = banana_sub, nvmax = 11, method = "forward")
+coef(reg.best.fwd, 3)
+```
 
+```{r}
+#backward stepwise selection
+regfit.bwd = regsubsets(quality_score ~ ., data = banana_sub[train,], nvmax=11, method = "backward")
+summary(regfit.bwd)
+coef(regfit.bwd,11)
 
+#create model matrix
+test.mat.step <- model.matrix(quality_score ~ ., data = banana_sub[test , ])
+coef(regfit.bwd,11)
 
+#predict function
+predict.regsubsets <- function (object ,newdata ,id ,...){
+form=as.formula (object$call [[2]])
+mat=model.matrix (form ,newdata )
+coefi =coef(object ,id=id)
+xvars =names (coefi )
+mat[,xvars ]%*% coefi
+}
 
+#name vectors and store results
+k <- 10
+n <- nrow(banana_sub)
+set.seed(123)
+folds <- sample(rep(1:k, length = n))
+cv.errors <- matrix(NA, k, 11, dimnames = list(NULL, paste(1:11)))
 
+#for loop with predict function
+for(j in 1:k) {
+  best.fit <- regsubsets(quality_score ~ ., data = banana_sub[folds != j, ], nvmax = 11, method = "backward")
+  for (i in 1:11) {
+    pred = predict(best.fit, banana_sub[folds == j, ], id = i)
+    cv.errors[j, i] = mean((banana_sub$quality_score[folds == j]- pred)^2)
+  }
+}
 
+#obtaining errors for each of the cross-validation models
+mean.cv.errors <- apply(cv.errors, 2, mean)
+mean.cv.errors
 
+#viewing plot
+#cv selects 3-variable model
+par(mfrow = c(1,1))
+plot(mean.cv.errors, type = "b")
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+#running best subset selection on the full dataset and pulling coefficients for the 3-variable model
+reg.best.bwd <- regsubsets(quality_score ~ ., data = banana_sub, nvmax = 11, method = "backward")
+coef(reg.best.fwd, 3)
+```
 
 
  
