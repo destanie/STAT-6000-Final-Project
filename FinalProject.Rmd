@@ -279,9 +279,9 @@ The confusion matrix shows that 434 instances of the "Good" category were correc
 ## Adressing Overfitting
 
 ```{r}
-# Splitting the data into training and test sets (80-20 split)
+# Splitting the data into training and test sets (70/30 split)
 set.seed(123)
-train_indices <- sample(1:nrow(X), size = 0.8 * nrow(X))
+train_indices <- sample(1:nrow(X), size = 0.7 * nrow(X))
 X_train <- X[train_indices, ]
 y_train <- y[train_indices]
 X_test <- X[-train_indices, ]
