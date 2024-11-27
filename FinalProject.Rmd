@@ -229,6 +229,7 @@ coef(reg.best.fwd, 3)
 ## lasso logistic regression (classification)
 ```{r}
 # loading data
+set.seed(123)
 bananas <- read.csv("going_bananas.csv")
 # y is going to be our target variable which is the quality_category
 y <- bananas$quality_category 
@@ -310,5 +311,104 @@ confusionMatrix(as.factor(predicted_classes_test), as.factor(y_test))
 
 ## Intepreting
 
-After addressing the overfitting issue, the model is no longer perfect. It performs well in predicting the "Good" category, and both "Processing" and "Unripe" are accurately classified. However, the model struggles with the "Premium" classification. Despite achieving a high overall accuracy and a strong Kappa statistic of 0.9721, the difficulty in predicting the "Premium" class comes from the limited number of premium samples in the dataset, thus highlighting the model's challenges with minority class prediction. Nonetheless, this model is an improvement over the earlier "perfect" model, as it provides a more realistic and robust representation of the data. 
+After addressing the overfitting issue, the model is no longer perfect. It performs well in predicting the "Good" category, and both "Processing" and "Unripe" are accurately classified. However, the model struggles with the "Premium" classification. Despite achieving a high overall accuracy and a strong Kappa statistic of 0.95, the difficulty in predicting the "Premium" class comes from the limited number of premium samples in the dataset, thus highlighting the model's challenges with minority class prediction. Nonetheless, this model is an improvement over the earlier "perfect" model, as it provides a more realistic and robust representation of the data. 
  
+## Modeling and Visulization
+
+## Confusion matrix heatmap (Perfect Model)
+```{r}
+# Confusion Matrix Heatmap
+library(ggplot2)
+library(reshape2)
+
+# Create the confusion matrix from the perfect modeling
+conf_matrix <- matrix(c(434, 0, 0, 0, 
+                        0, 25, 0, 0, 
+                        0, 0, 506, 0, 
+                        0, 0, 0, 35), 
+                      nrow = 4, byrow = TRUE)
+
+rownames(conf_matrix) <- c("Good", "Premium", "Processing", "Unripe")
+colnames(conf_matrix) <- c("Good", "Premium", "Processing", "Unripe")
+
+# Melting matrix for ggplot
+conf_melted <- melt(conf_matrix)
+
+# Plotting the heatmap
+ggplot(data = conf_melted, aes(x = Var2, y = Var1, fill = value)) +
+  geom_tile(color = "white") +
+  geom_text(aes(label = value), color = "black") +
+  scale_fill_gradient(low = "white", high = "lightblue") +
+  labs(title = "Confusion Matrix Heatmap", x = "Predicted", y = "Actual") +
+  theme_minimal()
+
+```
+
+## Confusion Matrix Heatmap (2nd Model)
+
+```{r}
+# Load required libraries
+library(ggplot2)
+library(reshape2)
+library(caret)
+
+# Define confusion matrix
+conf_matrix <- confusionMatrix(as.factor(predicted_classes_test), as.factor(y_test))
+
+# Extract confusion matrix table
+conf_table <- as.matrix(conf_matrix$table)
+
+# Melt the confusion matrix table for ggplot
+conf_melted <- melt(conf_table)
+
+# Plot confusion matrix heatmap
+ggplot(data = conf_melted, aes(x = Reference, y = Prediction, fill = value)) +
+  geom_tile(color = "white") +
+  geom_text(aes(label = value), color = "black", size = 4) + # Add counts as text
+  scale_fill_gradient(low = "white", high = "lightblue") +
+  labs(title = "Confusion Matrix Heatmap", x = "Actual", y = "Predicted", fill = "Count") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+
+## Showing feature importance
+
+```{r}
+# library
+library(ggplot2)
+
+# Extract coefficients from lasso model
+lasso_coefficients <- coef(lasso_model, s = best_lambda)
+coeff_df <- as.data.frame(as.matrix(lasso_coefficients[[1]]))
+coeff_df$Feature <- rownames(coeff_df)
+colnames(coeff_df) <- c("Coefficient", "Feature")
+coeff_df <- coeff_df[coeff_df$Coefficient != 0, ]  # Exclude zero coefficients
+
+# Plot feature importance
+ggplot(data = coeff_df, aes(x = reorder(Feature, Coefficient), y = Coefficient)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  coord_flip() +
+  labs(title = "Feature Importance (Lasso Coefficients)", x = "Feature", y = "Coefficient") +
+  theme_minimal()
+
+```
+
+## Class distribution of data set
+
+```{r}
+library(ggplot2)
+
+class_counts <- as.data.frame(table(y))
+colnames(class_counts) <- c("Class", "Count")
+
+# Plot
+ggplot(class_counts, aes(x = Class, y = Count, fill = Class)) +
+  geom_bar(stat = "identity") +
+  labs(title = "Class Distribution", x = "Class", y = "Count") +
+  theme_minimal() +
+  scale_fill_brewer(palette = "Set2")
+
+```
+
