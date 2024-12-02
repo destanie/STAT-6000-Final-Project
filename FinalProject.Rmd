@@ -119,7 +119,9 @@ plot(mean.cv.errors, type = "b")
 reg.best <- regsubsets(quality_score ~ ., data = banana_sub, nvmax = 11)
 coef(reg.best, 3)
 
-
+#plugging 3 feature model into MLR
+model_best <- lm(banana_sub$quality_score ~ banana_sub$ripeness_index + banana_sub$sugar_content_brix + banana_sub$length_cm, data = banana_sub)
+summary(model_best)
 ```
 
 ###Forward and backward stepwise selection
